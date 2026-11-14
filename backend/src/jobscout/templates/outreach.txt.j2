@@ -1,0 +1,11 @@
+Application for {{ role or "the role you posted" }}
+Hi {{ first_name or "there" }},
+
+I came across your LinkedIn post about {{ role or "the opening on your team" }} and would love to be considered.
+{% if profile_line %}
+{{ profile_line }}
+{% endif %}
+{% if has_resume %}I've attached my resume. {% endif %}I'd be glad to share more or hop on a quick call whenever it suits you.
+
+Thanks for your time,
+{{ sender }}

@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/*
+  jobscout design tokens
+  ----------------------
+  Neutrals: warm paper greys (replace Tailwind's cool zinc scale everywhere it is used).
+  Brand:    deep forest green, used sparingly for primary actions, focus and "saved" states.
+  Status:   muted green / ochre / brick / slate; never saturated.
+  Shape:    6px controls, 8px surfaces, hairline borders, shadows only for floating layers.
+*/
+@theme {
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* neutrals */
+  --color-zinc-50: #f8f7f4;
+  --color-zinc-100: #f0eee9;
+  --color-zinc-200: #e4e1d9;
+  --color-zinc-300: #d0ccc2;
+  --color-zinc-400: #a4a097;
+  --color-zinc-500: #6c685f; /* >= 4.5:1 on canvas and white */
+  --color-zinc-600: #5d5a52;
+  --color-zinc-700: #46433d;
+  --color-zinc-800: #2f2d29;
+  --color-zinc-900: #1f1e1b;
+  --color-zinc-950: #141311;
+
+  /* brand: forest */
+  --color-brand-50: #eef4f1;
+  --color-brand-100: #d9e7e0;
+  --color-brand-200: #b3cfc1;
+  --color-brand-500: #3f7a62;
+  --color-brand-600: #2f6650;
+  --color-brand-700: #255442;
+  --color-brand-800: #1d4335;
+  --color-brand-900: #163428;
+
+  /* status (map Tailwind's names to muted tones) */
+  --color-emerald-50: #eef4f1;
+  --color-emerald-600: #2f6650;
+  --color-emerald-700: #255442;
+  --color-emerald-800: #1d4335;
+  --color-amber-50: #faf3e3;
+  --color-amber-600: #a26f12;
+  --color-amber-700: #8a5d0e;
+  --color-amber-800: #6f4a0b;
+  --color-red-50: #fbedea;
+  --color-red-200: #efc9c1;
+  --color-red-600: #a8402f;
+  --color-red-700: #923626;
+  --color-red-800: #772b1e;
+  --color-sky-50: #edf2f7;
+  --color-sky-600: #3d5f84;
+  --color-sky-800: #2b4560;
+
+  /* surfaces */
+  --color-canvas: #f6f5f1;
+  --color-surface: #ffffff;
+  --color-line: #e4e1d9;
+  --color-ink: #1f1e1b;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+
+  --shadow-pop: 0 1px 2px rgb(31 30 27 / 0.06), 0 8px 24px -6px rgb(31 30 27 / 0.12);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01" on;
+}
+
+::selection {
+  background: var(--color-brand-100);
+  color: var(--color-ink);
+}
+
+/* tabular numbers everywhere numbers are compared */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.feed-in {
+  animation: feed-in 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-in {
+    animation: none;
+  }
+  * {
+    transition-duration: 0ms !important;
+  }
+}

@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jobscout"
+version = "0.1.0"
+description = "Find hiring posts with recruiter contacts (LinkedIn, Telegram) and send personalised outreach from Gmail."
+authors = [{ name = "Pranav Lande" }]
+requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.45",
+    "sqlalchemy>=2.0.30",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.13",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "cryptography>=42",
+    "phonenumbers>=8.13",
+    "google-genai>=1.0",
+    "jinja2>=3.1",
+    "typer>=0.12",
+    "rich>=13",
+    "tenacity>=8.3",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "langchain>=1.0",
+    "langchain-google-genai>=2.1",
+    "pypdf>=5",
+    "python-docx>=1.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "aiosmtpd>=1.4"]
+# Extra LLM providers for LLM_MODELS (Gemini via langchain-google-genai is always installed)
+openai = ["langchain-openai"]
+anthropic = ["langchain-anthropic"]
+groq = ["langchain-groq"]
+ollama = ["langchain-ollama"]
+
+[project.scripts]
+jobscout = "jobscout.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+jobscout = ["templates/*.j2", "migrations/*", "migrations/versions/*", "web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

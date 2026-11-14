@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------- secrets & personal data
+# Environment files hold passwords, API keys and the encryption key. Only the templates are committed.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Runtime data: browser profiles (LinkedIn session cookies), debug page dumps, uploaded resumes
+backend/data/
+/data/
+
+# Personal files
+backend/PROFILE.md
+*.pdf
+*.docx
+*.doc
+*.csv
+!frontend/src/app/api/contacts.csv/
+*.sql
+*.dump
+
+# ---------------------------------------------------------------- Python
+backend/.venv/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# ---------------------------------------------------------------- Node / Next.js
+node_modules/
+frontend/.next/
+frontend/out/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vercel
+
+# Generated locally by `next dev`
+frontend/AGENTS.md
+
+# ---------------------------------------------------------------- OS / editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.log
