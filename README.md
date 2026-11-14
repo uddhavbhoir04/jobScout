@@ -203,7 +203,7 @@ pytest                                   # unit tests (database tests are skippe
 TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/jobscout_test pytest
 
 cd ../frontend
-npm run lint && npx tsc --noEmit
+npm run lint && npm run typecheck
 ```
 
 The backend suite covers extraction rules, date filters, LinkedIn query building, the Telegram reader and
