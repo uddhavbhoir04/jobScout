@@ -6,6 +6,7 @@ import { useJobStream } from "@/lib/useJobStream";
 import { useAuth } from "../auth/AuthProvider";
 import { ErrorNote, PageHeader, Segmented, StatRow } from "../ui";
 import { FilterPanel, type Filters } from "./FilterPanel";
+import { jobFilterParams } from "./JobFilters";
 import { LiveFeed } from "./LiveFeed";
 import { TelegramPanel, type TelegramFilters } from "./TelegramPanel";
 
@@ -89,6 +90,7 @@ export function ScrapeView() {
           limit: f.limit,
           account_ids: f.accountIds === "all" ? null : f.accountIds,
           headless: f.headless,
+          ...jobFilterParams(f),
         }),
       });
       setJobId(job.id);
@@ -113,8 +115,7 @@ export function ScrapeView() {
           date_from: f.datePreset === "custom" ? f.dateFrom || null : null,
           date_to: f.datePreset === "custom" ? f.dateTo || null : null,
           limit: f.limit,
-          exp_min: f.expMin === "" ? null : Number(f.expMin),
-          exp_max: f.expMax === "" ? null : Number(f.expMax),
+          ...jobFilterParams(f),
         }),
       });
       setJobId(job.id);

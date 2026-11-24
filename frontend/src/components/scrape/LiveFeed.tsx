@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { JobEvent, JobStatus, LogEvent, PostEvent, ProgressEvent, SummaryEvent } from "@/lib/api";
-import { Badge, Card, cn, EmptyState, Spinner } from "../ui";
+import { API_URL, type JobEvent, type JobStatus, type LogEvent, type PostEvent, type ProgressEvent, type SummaryEvent } from "@/lib/api";
+import { Badge, buttonClass, Card, cn, EmptyState, Spinner } from "../ui";
 
 const STATUS_LABEL: Record<JobStatus, string> = {
   running: "Searching",
@@ -143,9 +143,16 @@ function SummaryBar({ summary, telegram }: { summary: SummaryEvent; telegram: bo
       : summary.stop_reason);
   return (
     <div className={cn("space-y-2 border-b border-line px-5 py-3 text-[13px]", reached ? "bg-brand-50/60" : "bg-amber-50/50")}>
-      <p className="text-zinc-700">
-        <span className="font-medium text-ink">Run #{summary.run_id} finished.</span> {reason}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <p className="text-zinc-700">
+          <span className="font-medium text-ink">Run #{summary.run_id} finished.</span> {reason}
+        </p>
+        {summary.saved > 0 && (
+          <a href={`${API_URL}/api/contacts.xlsx?run_id=${summary.run_id}`} className={cn(buttonClass("secondary", "sm"), "shrink-0")}>
+            Export Excel
+          </a>
+        )}
+      </div>
       {reasons.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {reasons.map(([r, n]) => (

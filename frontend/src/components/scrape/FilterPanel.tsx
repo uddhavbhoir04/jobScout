@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Account } from "@/lib/api";
 import { Button, Card, CardHeader, cn, Input, Label, Spinner } from "../ui";
+import { DEFAULT_JOB_FILTERS, experienceInvalid, JobFilterFields, type JobFilterValues } from "./JobFilters";
 import { TagInput } from "./TagInput";
 
 export type Filters = {
@@ -14,7 +15,7 @@ export type Filters = {
   limit: number;
   accountIds: number[] | "all";
   headless: boolean;
-};
+} & JobFilterValues;
 
 export const HIRING_TAG = "#hiring"; // always required (the backend enforces it too)
 
@@ -26,6 +27,7 @@ export const DEFAULT_FILTERS: Filters = {
   limit: 20,
   accountIds: "all",
   headless: false,
+  ...DEFAULT_JOB_FILTERS,
 };
 
 export const PRESET_LABELS: Record<string, string> = {
@@ -114,7 +116,8 @@ export function FilterPanel({
   };
 
   const customInvalid = f.datePreset === "custom" && !f.dateFrom;
-  const canStart = f.tags.length > 0 && selected.length > 0 && !customInvalid && !running && !starting;
+  const canStart =
+    f.tags.length > 0 && selected.length > 0 && !customInvalid && !experienceInvalid(f) && !running && !starting;
 
   return (
     <Card>
@@ -171,6 +174,8 @@ export function FilterPanel({
             </div>
           )}
         </div>
+
+        <JobFilterFields value={f} onChange={(patch) => setF((p) => ({ ...p, ...patch }))} disabled={running} />
 
         <div>
           <Label hint="Runs until reached, up to 100">Contacts to collect</Label>

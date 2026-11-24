@@ -68,8 +68,10 @@ def test_experience_range(text, expected):
     assert tg.experience_range(text) == expected
 
 
-def test_experience_filter_keeps_unknown_and_overlapping():
-    assert tg.experience_ok("Experience: 2-4 Years", 0, 3)
+def test_experience_filter_keeps_unknown_and_rejects_above_max():
+    assert tg.experience_ok("Experience: 1-3 Years", 0, 3)
+    assert not tg.experience_ok("Experience: 2-4 Years", 0, 3)
+    assert not tg.experience_ok("5+ years experience required", 0, 3)
     assert not tg.experience_ok("Experience: 6-10 Years", 0, 3)
     assert tg.experience_ok("no experience mentioned", 0, 3)
     assert tg.experience_ok("Experience: 6-10 Years", None, None)

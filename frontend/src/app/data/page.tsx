@@ -23,9 +23,14 @@ export default function DataPage() {
         title="Contacts & posts"
         description="Everyone you've found, the posts they came from, and your search history. Each email and phone number appears once."
         actions={
-          <a href={`${API_URL}/api/contacts.csv`} className={buttonClass("secondary", "md")}>
-            Export CSV
-          </a>
+          <div className="flex gap-2">
+            <a href={`${API_URL}/api/contacts.xlsx`} className={buttonClass("secondary", "md")}>
+              Export Excel
+            </a>
+            <a href={`${API_URL}/api/contacts.csv`} className={buttonClass("secondary", "md")}>
+              Export CSV
+            </a>
+          </div>
         }
       />
 
@@ -185,6 +190,7 @@ function RunsTable({ onError }: { onError: (m: string) => void }) {
             <Th className="text-right">Collected</Th>
             <Th>Status</Th>
             <Th>Started</Th>
+            <Th><span className="sr-only">Export</span></Th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -201,6 +207,13 @@ function RunsTable({ onError }: { onError: (m: string) => void }) {
                 </Badge>
               </Td>
               <Td className="whitespace-nowrap text-xs text-zinc-500">{timeAgo(r.started_at)}</Td>
+              <Td className="text-right">
+                {r.status !== "running" && (
+                  <a href={`${API_URL}/api/contacts.xlsx?run_id=${r.id}`} className={cn(buttonClass("secondary", "sm"), "whitespace-nowrap")}>
+                    Export Excel
+                  </a>
+                )}
+              </Td>
             </tr>
           ))}
         </tbody>

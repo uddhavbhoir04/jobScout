@@ -13,6 +13,7 @@ from jobscout.db.session import new_session
 from jobscout.extract.ai import Gemini, fallback_post_info
 from jobscout.extract.contacts import clean_person_name, find_emails, find_phones, hashtags_in, qualifies
 from jobscout.extract.dates import DateRange, now, relative_bounds
+from jobscout.extract.rules import experience_ok, location_ok, work_type_ok
 from jobscout.scrapers import get_scraper
 from jobscout.scrapers.base import LoginRequired
 from jobscout.security.crypto import decrypt
@@ -115,6 +116,8 @@ def run_scrape(
     *, user_id: int, platform: Platform, tags: list[str], date_range: DateRange, limit: int,
     required_tags: list[str] | None = None, use_ai: bool = False,
     account_ids: list[int] | None = None, headless: bool | None = None,
+    exp_min: int | None = None, exp_max: int | None = None,
+    location: str | None = None, work_types: list[str] | None = None,
     on_progress=None, on_event=None, should_stop=None,
 ) -> ScrapeResult:
     """Save posts that contain #hiring (+ any extra `required_tags`) AND at least one of `tags`.
@@ -125,6 +128,8 @@ def run_scrape(
     settings = get_settings()
     required = normalise_tags([HIRING_TAG] + list(required_tags or []))
     optional = [t for t in normalise_tags(tags) if t not in required]
+    if not optional:
+        raise ValueError("Add at least one role hashtag: every saved post must have #hiring and a role hashtag.")
     tags = required + optional
     combined, backups = build_queries(required, optional)
     limit = max(1, min(limit, MAX_LIMIT))
@@ -156,6 +161,7 @@ def run_scrape(
     # One combined search first. If it runs out before the target is reached, keep going with
     # "#hiring AND #tag" for each role hashtag (already-seen posts are skipped).
     queue: list[str] = [combined, *backups]
+    filters = PostFilters(exp_min=exp_min, exp_max=exp_max, location=location, work_types=work_types)
     try:
         for account in accounts:
             if done() or not queue:
@@ -177,7 +183,7 @@ def run_scrape(
                     query = queue[0]
                     try:
                         found = _scrape_tag(session, scraper, ai, run, query, required, optional, date_range,
-                                            result, seen_this_run, done, on_progress, on_event)
+                                            result, seen_this_run, done, on_progress, on_event, filters)
                     except LoginRequired as e:
                         log.error("Account %s was logged out / challenged: %s", account.id, e)
                         account.last_status = "challenged"
@@ -217,6 +223,24 @@ def run_scrape(
     return result
 
 
+@dataclass
+class PostFilters:
+    """Optional filters on what the post asks for. Posts that don't say are kept."""
+    exp_min: int | None = None
+    exp_max: int | None = None
+    location: str | None = None
+    work_types: list[str] | None = None
+
+    def reject_reason(self, text: str) -> str | None:
+        if not experience_ok(text, self.exp_min, self.exp_max):
+            return "experience outside your range"
+        if not location_ok(text, self.location):
+            return "location doesn't match"
+        if not work_type_ok(text, self.work_types):
+            return "work type doesn't match"
+        return None
+
+
 def post_event(raw, status: str, reason: str | None = None, **extra) -> dict:
     return {
         "type": "post", "status": status, "reason": reason, "tag": raw.search_tag,
@@ -227,7 +251,8 @@ def post_event(raw, status: str, reason: str | None = None, **extra) -> dict:
 
 def _scrape_tag(session, scraper, ai: Gemini | None, run: ScrapeRun, query: str,
                 required: list[str], optional: list[str], date_range: DateRange, result: ScrapeResult,
-                seen_this_run: set[str], done, on_progress, on_event=None) -> int:
+                seen_this_run: set[str], done, on_progress, on_event=None,
+                filters: PostFilters | None = None) -> int:
     """Process one LinkedIn search. Returns how many posts the search showed (0 = no results)."""
     region = get_settings().default_phone_region
     too_old = 0
@@ -267,6 +292,9 @@ def _scrape_tag(session, scraper, ai: Gemini | None, run: ScrapeRun, query: str,
 
         matched, reason = match_tags(raw.text, required, optional)
         if matched is None:
+            skip(raw, reason)
+            continue
+        if filters and (reason := filters.reject_reason(raw.text)):
             skip(raw, reason)
             continue
 

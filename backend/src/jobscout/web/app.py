@@ -8,7 +8,7 @@ from datetime import date
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -184,6 +184,8 @@ class ScrapeIn(BaseModel):
     channel_ids: list[int] | None = None
     exp_min: int | None = Field(default=None, ge=0, le=50)
     exp_max: int | None = Field(default=None, ge=0, le=50)
+    location: str | None = Field(default=None, max_length=200)   # comma-separated, any one matches
+    work_types: list[Literal["remote", "hybrid", "on-site"]] = []  # empty = any
 
 
 @app.get("/api/scrape/options")
@@ -195,7 +197,13 @@ def scrape_options():
 def start_scrape(body: ScrapeIn, user: User = Me):
     if manager.running(BROWSER_JOBS, user_id=user.id):
         raise HTTPException(409, "A job is already running.")
+    if body.exp_min is not None and body.exp_max is not None and body.exp_min > body.exp_max:
+        raise HTTPException(422, "Minimum experience can't be more than the maximum.")
     if body.source == "linkedin":
+        from jobscout.pipeline.scrape import HIRING_TAG, normalise_tags
+
+        if not [t for t in normalise_tags(body.tags) if t != HIRING_TAG]:
+            raise HTTPException(422, "Add at least one role hashtag.")
         _check_server_capacity()
     try:
         dr = resolve(body.date_filter, body.date_from, body.date_to)
@@ -217,6 +225,8 @@ def start_scrape(body: ScrapeIn, user: User = Me):
         res = run_scrape(user_id=user.id, platform=Platform.linkedin, tags=body.tags, use_ai=user.is_paid,
                          required_tags=body.required_tags, date_range=dr, limit=body.limit,
                          account_ids=body.account_ids or None, headless=body.headless,
+                         exp_min=body.exp_min, exp_max=body.exp_max, location=body.location,
+                         work_types=body.work_types,
                          on_progress=progress, on_event=job.emit, should_stop=lambda: job.stop_requested)
         job.emit({"type": "summary", "run_id": res.run_id, "scanned": res.scanned, "saved": res.saved,
                   "collected": res.collected, "limit": body.limit, "stop_reason": res.stop_reason,
@@ -228,9 +238,6 @@ def start_scrape(body: ScrapeIn, user: User = Me):
 
 def _start_telegram_scrape(body: ScrapeIn, dr, user: User):
     """Free plan: reads public channel pages over plain HTTP (no browser, no LinkedIn account, no AI)."""
-    if body.exp_min is not None and body.exp_max is not None and body.exp_min > body.exp_max:
-        raise HTTPException(422, "Minimum experience can't be more than the maximum.")
-
     def target(job: Job) -> None:
         from jobscout.pipeline.telegram import run_telegram_scrape
 
@@ -243,6 +250,7 @@ def _start_telegram_scrape(body: ScrapeIn, dr, user: User):
 
         res = run_telegram_scrape(user_id=user.id, keywords=body.keywords, date_range=dr, limit=body.limit,
                                   channel_ids=body.channel_ids or None, exp_min=body.exp_min, exp_max=body.exp_max,
+                                  location=body.location, work_types=body.work_types,
                                   on_progress=progress, on_event=job.emit, should_stop=lambda: job.stop_requested)
         job.emit({"type": "summary", "run_id": res.run_id, "scanned": res.scanned, "saved": res.saved,
                   "collected": res.collected, "limit": body.limit, "stop_reason": res.stop_reason,
@@ -373,6 +381,60 @@ def export_contacts(user: User = Me):
                         _iso(c.created_at)])
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
                              headers={"Content-Disposition": "attachment; filename=contacts.csv"})
+
+
+XLSX_COLUMNS = ("SNo", "Name", "Email", "Title", "Company")
+XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _run_contacts_query(user_id: int, run_id: int):
+    """(contact, post) for every contact found in one scrape run, with the run's post they came from."""
+    return (select(Contact, Post)
+            .join(ContactPost, ContactPost.contact_id == Contact.id)
+            .join(Post, Post.id == ContactPost.post_id)
+            .where(Contact.user_id == user_id, Post.user_id == user_id, Post.run_id == run_id)
+            .order_by(Contact.id, Post.id))
+
+
+@app.get("/api/contacts.xlsx")
+def export_contacts_xlsx(run_id: int | None = Query(None, ge=1), user: User = Me):
+    """Excel sheet: SNo, Name, Email, Title, Company. Anything not found is left blank.
+    With `run_id`, only the contacts found in that scrape run."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    from jobscout.extract.rules import find_company, find_title
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Contacts"
+    ws.append(XLSX_COLUMNS)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    ws.freeze_panes = "A2"
+    with new_session() as s:
+        if run_id is None:
+            rows = [(c, p) for c, _o, p in s.execute(_contacts_query(user.id, None)).all()]
+        else:
+            if not s.scalar(select(ScrapeRun.id).where(ScrapeRun.id == run_id, ScrapeRun.user_id == user.id)):
+                raise HTTPException(404, "Search not found.")
+            first: dict[int, tuple] = {}  # one row per contact, using its first post in the run
+            for c, p in s.execute(_run_contacts_query(user.id, run_id)).all():
+                first.setdefault(c.id, (c, p))
+            rows = list(first.values())
+        for n, (c, p) in enumerate(rows, start=1):
+            title = company = None
+            if p is not None:
+                title = find_title(p.description or "") or ((p.hiring_for or "").split(" | ")[0] or None)
+                company = find_company(p.description or "", p.author_name, p.author_profile_url)
+            ws.append([n, c.name, c.email, title, company])  # None -> empty cell
+    for col, width in zip("ABCDE", (6, 28, 34, 40, 30)):
+        ws.column_dimensions[col].width = width
+    buf = io.BytesIO()
+    wb.save(buf)
+    name = f"contacts-run-{run_id}.xlsx" if run_id else "contacts.xlsx"
+    return Response(buf.getvalue(), media_type=XLSX_TYPE,
+                    headers={"Content-Disposition": f"attachment; filename={name}"})
 
 
 @app.get("/api/runs")

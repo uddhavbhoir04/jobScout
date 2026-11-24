@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, timeAgo, type TelegramChannel } from "@/lib/api";
 import { Button, Card, CardHeader, cn, ErrorNote, Input, Label, Spinner } from "../ui";
 import { PRESET_LABELS } from "./FilterPanel";
+import { DEFAULT_JOB_FILTERS, experienceInvalid, JobFilterFields, type JobFilterValues } from "./JobFilters";
 import { TagInput } from "./TagInput";
 
 export type TelegramFilters = {
@@ -12,9 +13,7 @@ export type TelegramFilters = {
   dateFrom: string;
   dateTo: string;
   limit: number;
-  expMin: string; // "" = no minimum
-  expMax: string;
-};
+} & JobFilterValues;
 
 const DEFAULTS: TelegramFilters = {
   keywords: ["python"],
@@ -22,8 +21,7 @@ const DEFAULTS: TelegramFilters = {
   dateFrom: "",
   dateTo: "",
   limit: 20,
-  expMin: "",
-  expMax: "",
+  ...DEFAULT_JOB_FILTERS,
 };
 
 const SUGGESTED = ["python", "react", "node.js", "java", "devops", "data analyst"];
@@ -129,11 +127,8 @@ export function TelegramPanel({
   };
 
   const activeCount = channels?.filter((c) => c.active).length ?? 0;
-  const expMin = f.expMin === "" ? null : Number(f.expMin);
-  const expMax = f.expMax === "" ? null : Number(f.expMax);
-  const expInvalid = expMin !== null && expMax !== null && expMin > expMax;
   const customInvalid = f.datePreset === "custom" && !f.dateFrom;
-  const canStart = activeCount > 0 && !expInvalid && !customInvalid && !running && !starting;
+  const canStart = activeCount > 0 && !experienceInvalid(f) && !customInvalid && !running && !starting;
 
   return (
     <Card>
@@ -256,21 +251,7 @@ export function TelegramPanel({
           )}
         </div>
 
-        <div>
-          <Label hint="Optional">Experience (years)</Label>
-          <div className="flex items-center gap-2">
-            <Input type="number" min={0} max={50} placeholder="Min" aria-label="Minimum years" value={f.expMin}
-              disabled={running} onChange={(e) => set("expMin", e.target.value)} className="w-20" />
-            <span className="text-xs text-zinc-500">to</span>
-            <Input type="number" min={0} max={50} placeholder="Max" aria-label="Maximum years" value={f.expMax}
-              disabled={running} onChange={(e) => set("expMax", e.target.value)} className="w-20" />
-          </div>
-          {expInvalid ? (
-            <p className="mt-1.5 text-xs text-red-700">Minimum can&apos;t be more than maximum.</p>
-          ) : (
-            <p className="mt-1.5 text-xs text-zinc-500">Posts that don&apos;t mention experience are kept.</p>
-          )}
-        </div>
+        <JobFilterFields value={f} onChange={(patch) => setF((p) => ({ ...p, ...patch }))} disabled={running} />
 
         <div>
           <Label hint="Up to 100">Contacts to collect</Label>

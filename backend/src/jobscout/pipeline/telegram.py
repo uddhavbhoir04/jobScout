@@ -19,6 +19,8 @@ from jobscout.db.session import new_session
 from jobscout.extract.ai import fallback_post_info
 from jobscout.extract.contacts import find_emails, find_phones
 from jobscout.extract.dates import DateRange, now
+from jobscout.extract.rules import experience_ok, experience_range, location_ok, work_type_ok  # noqa: F401
+from jobscout.extract.rules import labelled_field as _field
 from jobscout.pipeline.scrape import MAX_LIMIT, ScrapeResult, post_event, save_contacts
 from jobscout.scrapers.base import RawPost
 from jobscout.scrapers.telegram import ChannelNotFound, TelegramBlocked, TgPost, fetch_page, iter_posts
@@ -32,12 +34,6 @@ _SCAM = re.compile(
     r"(?i)\b(registration\s+fee|processing\s+fee|security\s+deposit|refundable\s+(?:fee|amount|deposit)|"
     r"pay\s+(?:rs\.?|₹|inr)\s*\d|training\s+fee|joining\s+fee)"
 )
-_EXP_LINE = re.compile(r"(?im)^[^\w\n]*(?:experience|exp)\b[^\n:]*[:\-–]?\s*(.{1,60})$")
-_EXP_RANGE = re.compile(r"(?i)(\d{1,2})\s*\+?\s*(?:-|–|to)\s*(\d{1,2})\s*\+?\s*(?:years?|yrs?)")
-_EXP_PLUS = re.compile(r"(?i)(\d{1,2})\s*\+\s*(?:years?|yrs?)")
-_EXP_ONE = re.compile(r"(?i)(\d{1,2})\s*(?:years?|yrs?)")
-_FRESHER = re.compile(r"(?i)\bfreshers?\b|\b0\s*(?:-|to)\s*1\s*(?:years?|yrs?)")
-_FIELD = r"(?im)^[^\w\n]*{label}\s*[:\-–]\s*(.+)$"
 
 
 # ------------------------------------------------------------------ text helpers
@@ -58,39 +54,6 @@ def match_keywords(text: str, keywords: list[str]) -> list[str]:
         if re.search(rf"(?<![\w]){re.escape(k)}(?![a-z0-9])", text, re.I):
             found.append(k)
     return found
-
-
-def experience_range(text: str) -> tuple[int, int] | None:
-    """(min, max) years the post asks for, or None if it doesn't say. Prefers an 'Experience:' line."""
-    line = _EXP_LINE.search(text)
-    for scope in ([line.group(1)] if line else []) + [text]:
-        if m := _EXP_RANGE.search(scope):
-            a, b = int(m.group(1)), int(m.group(2))
-            return (min(a, b), max(a, b))
-        if m := _EXP_PLUS.search(scope):
-            return (int(m.group(1)), 99)
-        if _FRESHER.search(scope):
-            return (0, 1)
-        if m := _EXP_ONE.search(scope):
-            return (int(m.group(1)), int(m.group(1)))
-    return None
-
-
-def experience_ok(text: str, exp_min: int | None, exp_max: int | None) -> bool:
-    if exp_min is None and exp_max is None:
-        return True
-    rng = experience_range(text)
-    if rng is None:
-        return True  # unknown: keep it, the user can judge
-    lo, hi = rng
-    return lo <= (exp_max if exp_max is not None else 99) and hi >= (exp_min or 0)
-
-
-def _field(text: str, *labels: str) -> str | None:
-    for label in labels:
-        if m := re.search(_FIELD.format(label=label), text):
-            return m.group(1).strip()[:80]
-    return None
 
 
 def hiring_summary(text: str) -> str | None:
@@ -189,6 +152,7 @@ def ensure_default_channels(session, user_id: int) -> None:
 def run_telegram_scrape(
     *, user_id: int, keywords: list[str], date_range: DateRange, limit: int,
     channel_ids: list[int] | None = None, exp_min: int | None = None, exp_max: int | None = None,
+    location: str | None = None, work_types: list[str] | None = None,
     on_progress=None, on_event=None, should_stop=None,
 ) -> ScrapeResult:
     """Save posts from the user's Telegram channels that mention a keyword and carry an email or phone."""
@@ -275,6 +239,12 @@ def run_telegram_scrape(
                 continue
             if not experience_ok(post.text, exp_min, exp_max):
                 skip(raw, "experience outside your range")
+                continue
+            if not location_ok(post.text, location):
+                skip(raw, "location doesn't match")
+                continue
+            if not work_type_ok(post.text, work_types):
+                skip(raw, "work type doesn't match")
                 continue
             if _SCAM.search(post.text):
                 skip(raw, "asks for a fee: likely a scam")
