@@ -240,7 +240,7 @@ def run_telegram_scrape(
             if not experience_ok(post.text, exp_min, exp_max):
                 skip(raw, "experience outside your range")
                 continue
-            if not location_ok(post.text, location):
+            if not location_ok(post.text, location, work_types):
                 skip(raw, "location doesn't match")
                 continue
             if not work_type_ok(post.text, work_types):

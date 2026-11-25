@@ -4,7 +4,8 @@ import { cn, Input, Label } from "../ui";
 
 // Filters on what a job post asks for, shared by the LinkedIn and Telegram panels.
 // Rules (the backend enforces them too): a post's experience may not go above the max; with a location set,
-// the post must mention one of them unless it's remote. Posts that don't mention experience or work type are kept.
+// the post must mention one of them, unless it's remote and you're looking for remote work
+// (Remote selected, or no work type selected). Hybrid / on-site jobs always have to be in one of your locations. Posts that don't mention experience or work type are kept.
 
 export type WorkType = "remote" | "hybrid" | "on-site";
 
@@ -81,7 +82,7 @@ export function JobFilterFields({
           aria-label="Work location"
           onChange={(e) => onChange({ location: e.target.value })}
         />
-        <p className="mt-1.5 text-xs text-zinc-500">Comma-separated. A post must mention at least one, unless it&apos;s remote.</p>
+        <p className="mt-1.5 text-xs text-zinc-500">Comma-separated. Hybrid and on-site jobs must be in one of these. Remote jobs can be anywhere.</p>
       </div>
 
       <div>

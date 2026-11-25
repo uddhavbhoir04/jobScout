@@ -234,7 +234,7 @@ class PostFilters:
     def reject_reason(self, text: str) -> str | None:
         if not experience_ok(text, self.exp_min, self.exp_max):
             return "experience outside your range"
-        if not location_ok(text, self.location):
+        if not location_ok(text, self.location, self.work_types):
             return "location doesn't match"
         if not work_type_ok(text, self.work_types):
             return "work type doesn't match"

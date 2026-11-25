@@ -135,22 +135,26 @@ def experience_ok(text: str, exp_min: int | None, exp_max: int | None) -> bool:
     return hi <= (exp_max if exp_max is not None else 99) and hi >= (exp_min or 0)
 
 
-def location_ok(text: str, location: str | None) -> bool:
+def location_ok(text: str, location: str | None, work_types: list[str] | set[str] | None = None) -> bool:
     """The post must mention at least one of the comma/slash separated locations (whole words).
-    Remote posts pass whatever their location, because a remote job isn't tied to a city."""
+    Remote posts skip this check, but only when you're looking for remote work (Remote selected,
+    or no work type selected): hybrid and on-site jobs always have to be in one of your locations."""
     terms = [t.strip().lower() for t in re.split(r"[,/|;]", location or "") if t.strip()]
     if not terms:
         return True
     text_lower = text.lower()
     if any(re.search(rf"(?<![a-z0-9]){re.escape(t)}(?![a-z0-9])", text_lower) for t in terms):
         return True
-    return "remote" in detect_work_types(text)
+    allowed = _normalize_work_types(work_types)
+    remote_wanted = not allowed or "remote" in allowed
+    return remote_wanted and "remote" in detect_work_types(text)
 
 
 _REMOTE_RE = re.compile(
     r"(?i)\b(remote|remotely|wfh|work\s+from\s+home|telecommute|telecommuting|work\s+from\s+anywhere|100%\s*remote)\b"
 )
 _NOT_REMOTE_RE = re.compile(r"(?i)\b(?:no|not|non)\s+remote\b")
+_PARTIAL_REMOTE_RE = re.compile(r"(?i)\bpartially\s+remote\b")
 
 _HYBRID_RE = re.compile(
     r"(?i)\b(hybrid|flexible\s*(?:work|working|location)|\d\s*days?\s+(?:in\s+office|wfh|from\s+home)|partially\s+remote)\b"
@@ -164,7 +168,8 @@ WORK_TYPES = {"remote", "hybrid", "on-site"}
 
 def detect_work_types(text: str) -> set[str]:
     types = set()
-    if _REMOTE_RE.search(text) and not _NOT_REMOTE_RE.search(text):
+    # "partially remote" describes a hybrid job, not a remote one
+    if _REMOTE_RE.search(_PARTIAL_REMOTE_RE.sub(" ", text)) and not _NOT_REMOTE_RE.search(text):
         types.add("remote")
     if _HYBRID_RE.search(text):
         types.add("hybrid")
@@ -173,13 +178,17 @@ def detect_work_types(text: str) -> set[str]:
     return types
 
 
+def _normalize_work_types(types: list[str] | set[str] | None) -> set[str]:
+    return {
+        "on-site" if t.strip().lower() in ("onsite", "on_site") else t.strip().lower()
+        for t in (types or []) if t.strip()
+    }
+
+
 def work_type_ok(text: str, allowed_types: list[str] | set[str] | None) -> bool:
     """True if the post matches one of the selected work types (remote, hybrid, on-site).
     Posts that don't say how the job is worked are kept."""
-    allowed = {
-        "on-site" if t.strip().lower() in ("onsite", "on_site") else t.strip().lower()
-        for t in (allowed_types or []) if t.strip()
-    }
+    allowed = _normalize_work_types(allowed_types)
     if not allowed or allowed >= WORK_TYPES:
         return True
     detected = detect_work_types(text)

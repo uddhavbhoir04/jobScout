@@ -24,6 +24,22 @@ def test_location_keeps_remote_posts():
     assert location_ok("Fully remote role, DM me", "Pune")
 
 
+def test_location_remote_bypass_only_when_remote_is_wanted():
+    # only hybrid / on-site selected: the job must be in one of your locations, remote mention or not
+    assert not location_ok("Remote or on-site, Chennai", "Pune", ["hybrid", "on-site"])
+    assert not location_ok("Fully remote role", "Pune", ["on-site"])
+    assert location_ok("Hybrid, Pune office", "Pune", ["hybrid"])
+    # remote selected (alone or with others): remote jobs can be anywhere
+    assert location_ok("Fully remote role", "Pune", ["remote"])
+    assert location_ok("Fully remote role", "Pune", ["remote", "hybrid"])
+    assert not location_ok("Hybrid role in Chennai", "Pune", ["remote", "hybrid"])
+
+
+def test_partially_remote_is_hybrid_not_remote():
+    assert detect_work_types("Hybrid, partially remote") == {"hybrid"}
+    assert not location_ok("Partially remote, Chennai office", "Pune")
+
+
 def test_location_is_not_a_substring_match():
     assert not location_ok("Location: Punekar Nagar", "pune")
 
@@ -69,6 +85,11 @@ def test_post_filters_reject_reason():
     assert f.reject_reason("Experience: 6-10 years") == "experience outside your range"
     assert f.reject_reason("Location: Chennai") == "location doesn't match"
     assert f.reject_reason("Work from office in Pune") == "work type doesn't match"
+    assert f.reject_reason("Hybrid role in Chennai, partially remote") == "location doesn't match"
+
+    onsite = PostFilters(location="Pune", work_types=["hybrid", "on-site"])
+    assert onsite.reject_reason("Remote / on-site in Chennai") == "location doesn't match"
+    assert onsite.reject_reason("On-site in Pune") is None
     assert PostFilters().reject_reason("anything") is None
 
 
