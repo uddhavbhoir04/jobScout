@@ -14,6 +14,7 @@ const I = {
   table: <><rect x="2.25" y="2.75" width="11.5" height="10.5" rx="1.25" /><path d="M2.25 6.25h11.5M6.25 6.25v7" /></>,
   menu: <><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" /></>,
   close: <><path d="m4 4 8 8M12 4l-8 8" /></>,
+  send: <><path d="M13.75 2.25 7 9" /><path d="m13.75 2.25-4.5 11.5L7 9 2.25 6.75z" /></>,
   out: <><path d="M6.5 13.25H4a1.25 1.25 0 0 1-1.25-1.25V4A1.25 1.25 0 0 1 4 2.75h2.5" /><path d="M10.5 11 13.5 8l-3-3M13.25 8H6.5" /></>,
 };
 
@@ -43,10 +44,16 @@ const NAV: { group: string; items: NavItem[] }[] = [
     group: "Find leads",
     items: [
       { href: "/", label: "Scrape", icon: "search" },
-      { href: "/accounts", label: "LinkedIn accounts", icon: "link" },
+      { href: "/accounts", label: "Accounts", icon: "link" },
     ],
   },
-  { group: "Outreach", items: [{ href: "/emails", label: "Emails", icon: "mail", paidOnly: true }] },
+  {
+    group: "Outreach",
+    items: [
+      { href: "/apply", label: "Auto apply", icon: "send" },
+      { href: "/emails", label: "Emails", icon: "mail", paidOnly: true },
+    ],
+  },
   { group: "Data", items: [{ href: "/data", label: "Contacts & posts", icon: "table" }] },
 ];
 

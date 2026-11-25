@@ -19,10 +19,26 @@ def profile_dir(account: Account) -> Path:
 
 @contextmanager
 def open_context(account: Account, headless: bool | None = None) -> Iterator[BrowserContext]:
+    with _persistent_context(profile_dir(account), headless) as ctx:
+        yield ctx
+
+
+@contextmanager
+def open_anonymous_context(name: str, headless: bool | None = None) -> Iterator[BrowserContext]:
+    """Browser for sites searched without logging in (Naukri, Indeed). The profile is kept so cookies
+    from a passed bot check carry over to the next run."""
+    p = get_settings().data_dir / "profiles" / f"{name}_anon"
+    p.mkdir(parents=True, exist_ok=True)
+    with _persistent_context(p, headless) as ctx:
+        yield ctx
+
+
+@contextmanager
+def _persistent_context(user_data_dir: Path, headless: bool | None) -> Iterator[BrowserContext]:
     headless = get_settings().headless if headless is None else headless
     with sync_playwright() as pw:
         ctx = pw.chromium.launch_persistent_context(
-            user_data_dir=str(profile_dir(account)),
+            user_data_dir=str(user_data_dir),
             headless=headless,
             viewport={"width": 1366, "height": 900},
             locale="en-US",

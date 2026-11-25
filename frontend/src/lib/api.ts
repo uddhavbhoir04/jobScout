@@ -17,9 +17,11 @@ export class ApiError extends Error {
 // is_paid comes from the profile API; paid users get the features that cost API money (Emails).
 export type User = { id: number; email: string; name: string | null; is_paid: boolean; plan: "paid" | "free" };
 
+export type AccountSite = "linkedin" | "naukri" | "indeed";
+
 export type Account = {
   id: number;
-  platform: string;
+  platform: AccountSite;
   email: string;
   active: boolean;
   last_login_at: string | null;
@@ -69,6 +71,17 @@ export type PostEvent = JobEvent & {
   post_id?: number;
   counted?: boolean; // gave at least one NEW email/phone (counts toward the target)
   note?: string | null; // why a saved post didn't count
+  // job boards (Naukri, Indeed) and auto apply
+  kind?: "job" | "application";
+  apply_status?: ApplyStatus;
+  questions?: ApplyQA[];
+  url?: string | null;
+  job_title?: string | null;
+  company?: string | null;
+  location?: string | null;
+  salary?: string | null;
+  experience?: string | null;
+  work_mode?: string | null;
 };
 
 export type ProgressEvent = JobEvent & { type: "progress"; scanned: number; saved: number; collected: number; limit: number };
@@ -122,10 +135,31 @@ export type Post = {
   scraped_at: string;
   run_id: number | null;
   text: string;
+  platform: Platform;
+  job_title: string | null;
+  company: string | null;
+  location: string | null;
+  experience: string | null;
+  salary: string | null;
+  work_mode: string | null;
+};
+
+export type Platform = "linkedin" | "telegram" | "naukri" | "indeed" | "wellfound";
+
+/** Job boards: runs save every matching job, so exports list jobs rather than contacts. */
+export const JOB_BOARDS: Platform[] = ["naukri", "indeed"];
+export const PLATFORM_LABEL: Record<Platform, string> = {
+  linkedin: "LinkedIn",
+  telegram: "Telegram",
+  naukri: "Naukri",
+  indeed: "Indeed",
+  wellfound: "Wellfound",
 };
 
 export type Run = {
   id: number;
+  kind: "scrape" | "apply";
+  platform: Platform;
   hashtags: string[];
   date_filter: string;
   limit: number;
@@ -216,3 +250,48 @@ export function timeAgo(iso: string | null): string {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 }
+
+// ---------------------------------------------------------------- auto apply
+export type ApplyStatus = "applied" | "dry_run" | "needs_you" | "skipped" | "failed";
+export type ApplyQA = { q: string; answer: string | null; source: "saved" | "learned" | "ai" | "prefilled" | "none" };
+
+export type ApplyAnswers = {
+  notice_period_days: number | null;
+  current_ctc: string | null;
+  expected_ctc: string | null;
+  total_experience_years: number | null;
+  skills_experience: Record<string, number>;
+  relocate: boolean | null;
+  authorized_to_work: boolean | null;
+  needs_sponsorship: boolean | null;
+  phone: string | null;
+  city: string | null;
+  linkedin_url: string | null;
+  portfolio_url: string | null;
+  custom: { q: string; a: string }[];
+};
+
+export type ApplySettings = {
+  answers: Partial<ApplyAnswers>;
+  learned: Record<string, string>;
+  daily_cap: number;
+  applied_today: Record<AccountSite, number>;
+  resume_filename: string | null;
+  resume_chars: number;
+};
+
+export type Application = {
+  id: number;
+  platform: AccountSite;
+  external_id: string;
+  url: string | null;
+  title: string | null;
+  company: string | null;
+  location: string | null;
+  status: ApplyStatus;
+  reason: string | null;
+  questions: ApplyQA[];
+  run_id: number | null;
+  created_at: string;
+  updated_at: string;
+};

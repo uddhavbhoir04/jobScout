@@ -110,8 +110,8 @@ class ResumeIn(BaseModel):
     content_base64: str
 
 
-@router.post("/email/settings/resume")
-def upload_resume(body: ResumeIn, user: User = Me):
+def store_resume(user_id: int, body: "ResumeIn"):
+    """Save the CV file and its text (shared by the Emails page and Auto apply). Returns the settings row."""
     name = Path(body.filename).name
     if not name.lower().endswith((".pdf", ".doc", ".docx")):
         raise HTTPException(422, "Upload a PDF or Word file.")
@@ -121,18 +121,25 @@ def upload_resume(body: ResumeIn, user: User = Me):
         raise HTTPException(422, "Could not read the file.")
     if not data or len(data) > MAX_RESUME_BYTES:
         raise HTTPException(422, "Resume must be under 5 MB.")
-    folder = get_settings().data_dir / "resumes" / f"user_{user.id}"
+    folder = get_settings().data_dir / "resumes" / f"user_{user_id}"
     folder.mkdir(parents=True, exist_ok=True)
     for old in folder.iterdir():
         old.unlink()
     safe = re.sub(r"[^\w.\- ]", "_", name)
     path = folder / safe
     path.write_bytes(data)
-    with new_session() as s:
-        row = get_or_create_settings(s, user.id)
-        row.resume_filename, row.resume_path = safe, str(path)
-        row.resume_text = extract_text(path) or None
-        s.commit()
+    s = new_session()
+    row = get_or_create_settings(s, user_id)
+    row.resume_filename, row.resume_path = safe, str(path)
+    row.resume_text = extract_text(path) or None
+    s.commit()
+    return s, row
+
+
+@router.post("/email/settings/resume")
+def upload_resume(body: ResumeIn, user: User = Me):
+    s, row = store_resume(user.id, body)
+    with s:
         return _settings_dict(row)
 
 

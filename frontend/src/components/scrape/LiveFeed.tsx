@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { API_URL, type JobEvent, type JobStatus, type LogEvent, type PostEvent, type ProgressEvent, type SummaryEvent } from "@/lib/api";
 import { Badge, buttonClass, Card, cn, EmptyState, Spinner } from "../ui";
+import { QAList, STATUS as APPLY_STATUS } from "../apply/ApplicationsList";
 
 const STATUS_LABEL: Record<JobStatus, string> = {
   running: "Searching",
@@ -17,6 +18,8 @@ const STOP_REASON: Record<string, string> = {
   "no working LinkedIn account left": "No LinkedIn account could stay logged in. Log in again on LinkedIn accounts.",
   "no channel could be read": "None of your Telegram channels could be read. Check them on the Telegram tab.",
 };
+
+const BOARD_NAME: Record<string, string> = { naukri: "Naukri", indeed: "Indeed" };
 
 export function LiveFeed({ events, status }: { events: JobEvent[]; status: JobStatus | null }) {
   const [showSkipped, setShowSkipped] = useState(false);
@@ -42,16 +45,20 @@ export function LiveFeed({ events, status }: { events: JobEvent[]; status: JobSt
   const skipped = posts.length - saved;
   const scanned = summary?.scanned ?? progress?.scanned ?? 0;
   const limit = (start?.limit as number | undefined) ?? progress?.limit ?? 0;
-  const visible = showSkipped ? posts : posts.filter((p) => p.status === "saved");
+  // auto apply: jobs left for the user ("needs you") and failures are always shown
+  const visible = showSkipped
+    ? posts
+    : posts.filter((p) => p.status === "saved" || p.apply_status === "needs_you" || p.apply_status === "failed");
   const range = start?.date_range as { label: string } | undefined;
   const pct = limit ? Math.min(100, Math.round((collected / limit) * 100)) : 0;
+  const unit = (start?.unit as string | undefined) ?? "contacts";
 
   if (!status) {
     return (
       <Card className="min-h-[480px]">
         <EmptyState title="No search running">
-          Choose LinkedIn or Telegram, set your filters and how many contacts you want, then start. Each post appears
-          here as it&apos;s checked, with the reason it was saved or skipped.
+          Choose a source, set your filters and how many contacts or jobs you want, then start. Each post or job
+          appears here as it&apos;s checked, with the reason it was saved or skipped.
         </EmptyState>
       </Card>
     );
@@ -81,7 +88,7 @@ export function LiveFeed({ events, status }: { events: JobEvent[]; status: JobSt
         <div className="flex items-baseline justify-between gap-4">
           <div>
             <span className="text-2xl font-semibold tabular-nums text-ink">{collected}</span>
-            {limit > 0 && <span className="text-sm tabular-nums text-zinc-500"> / {limit} contacts</span>}
+            {limit > 0 && <span className="text-sm tabular-nums text-zinc-500"> / {limit} {unit}</span>}
           </div>
           <div className="flex gap-5 text-xs text-zinc-500">
             <span><b className="font-medium tabular-nums text-zinc-800">{saved}</b> saved</span>
@@ -113,33 +120,48 @@ export function LiveFeed({ events, status }: { events: JobEvent[]; status: JobSt
         </details>
       )}
 
-      {summary && <SummaryBar summary={summary} telegram={start?.source === "telegram"} />}
+      {summary && <SummaryBar summary={summary} source={(start?.source as string | undefined) ?? "linkedin"} unit={unit} />}
 
       {/* posts */}
       <div className="flex-1 divide-y divide-line overflow-y-auto" style={{ maxHeight: "70vh" }}>
         {visible.length === 0 && (
           <p className="px-5 py-12 text-center text-sm text-zinc-500">
             {status === "running"
-              ? "Checking posts. Saved contacts will appear here."
+              ? unit === "applications"
+                ? "Looking for Easy Apply jobs. Each application appears here as it's sent."
+                : unit === "jobs" ? "Checking jobs. Saved jobs will appear here." : "Checking posts. Saved contacts will appear here."
               : skipped && !showSkipped
                 ? "No posts were saved. Turn on “Show skipped posts” to see why."
                 : "No posts to show."}
           </p>
         )}
-        {visible.map((p) => (p.status === "saved" ? <SavedPost key={p.seq} p={p} /> : <SkippedPost key={p.seq} p={p} />))}
+        {visible.map((p) =>
+          p.kind === "application" && p.apply_status !== "skipped" ? (
+            <ApplicationEvent key={p.seq} p={p} />
+          ) : p.status === "saved" ? (
+            <SavedPost key={p.seq} p={p} />
+          ) : (
+            <SkippedPost key={p.seq} p={p} />
+          ),
+        )}
       </div>
     </Card>
   );
 }
 
-function SummaryBar({ summary, telegram }: { summary: SummaryEvent; telegram: boolean }) {
+function SummaryBar({ summary, source, unit }: { summary: SummaryEvent; source: string; unit: string }) {
+  const applying = unit === "applications";
+  const telegram = source === "telegram";
+  const board = BOARD_NAME[source];
   const reasons = Object.entries(summary.skipped).sort((a, b) => b[1] - a[1]);
   const reached = summary.stop_reason === "target reached";
-  const reason = STOP_REASON[summary.stop_reason] ??
-    (summary.stop_reason.startsWith("no more matching")
-      ? telegram
-        ? "No more matching posts in your channels for these dates. Try a wider date range, more keywords or another channel."
-        : "LinkedIn has no more matching posts for these hashtags and dates. Try a wider date range or more role hashtags."
+  const reason = STOP_REASON[summary.stop_reason] ?? (applying ? `${summary.stop_reason[0].toUpperCase()}${summary.stop_reason.slice(1)}.` : null) ??
+    ((summary.stop_reason.startsWith("no more matching") || summary.stop_reason.startsWith("no more jobs with an email"))
+      ? board
+        ? `${board} has no more jobs with an email in the description for these keywords and dates. Try a wider date range, more keywords or more locations.`
+        : telegram
+          ? "No more matching posts in your channels for these dates. Try a wider date range, more keywords or another channel."
+          : "LinkedIn has no more matching posts for these hashtags and dates. Try a wider date range or more role hashtags."
       : summary.stop_reason);
   return (
     <div className={cn("space-y-2 border-b border-line px-5 py-3 text-[13px]", reached ? "bg-brand-50/60" : "bg-amber-50/50")}>
@@ -147,7 +169,7 @@ function SummaryBar({ summary, telegram }: { summary: SummaryEvent; telegram: bo
         <p className="text-zinc-700">
           <span className="font-medium text-ink">Run #{summary.run_id} finished.</span> {reason}
         </p>
-        {summary.saved > 0 && (
+        {summary.saved > 0 && !applying && (
           <a href={`${API_URL}/api/contacts.xlsx?run_id=${summary.run_id}`} className={cn(buttonClass("secondary", "sm"), "shrink-0")}>
             Export Excel
           </a>
@@ -183,22 +205,62 @@ function SavedPost({ p }: { p: PostEvent }) {
           <span className="text-sm font-medium text-ink">{p.author || "Unknown"}</span>
         )}
         {p.posted && <span className="text-xs text-zinc-500">{p.posted.split("•")[0].trim()} ago</span>}
-        {p.counted === false ? (
+        {p.kind === "job" ? (
+          <Badge tone="green">Job + email</Badge>
+        ) : p.counted === false ? (
           <span title={p.note ?? undefined}><Badge>Saved, not counted</Badge></span>
         ) : (
           <Badge tone="green">New contact</Badge>
         )}
       </div>
-      {p.hiring_for && <p className="mt-1 text-sm text-zinc-700">{p.hiring_for}</p>}
+      {p.kind === "job" ? (
+        <p className="mt-1 text-sm text-zinc-700">
+          {p.url ? (
+            <a href={p.url} target="_blank" rel="noreferrer" className="font-medium text-ink underline-offset-4 hover:underline">{p.job_title}</a>
+          ) : (
+            <span className="font-medium text-ink">{p.job_title}</span>
+          )}
+          {[p.location, p.experience, p.salary, p.work_mode].filter(Boolean).map((x) => <span key={x} className="text-zinc-500"> · {x}</span>)}
+        </p>
+      ) : (
+        p.hiring_for && <p className="mt-1 text-sm text-zinc-700">{p.hiring_for}</p>
+      )}
       <dl className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px]">
         {p.contact_name && <Field label="Contact" value={p.contact_name} />}
         {(p.emails ?? []).map((e) => <Field key={e} label="Email" value={e} mono copy />)}
         {(p.phones ?? []).map((ph) => <Field key={ph} label="Phone" value={ph} mono copy />)}
       </dl>
       <button onClick={() => setOpen(!open)} className="mt-2 text-xs font-medium text-zinc-500 hover:text-ink">
-        {open ? "Hide post" : "Read post"}
+        {open ? "Hide" : p.kind === "job" ? "Read description" : "Read post"}
       </button>
       {open && <p className="mt-2 whitespace-pre-line rounded-md bg-zinc-50 p-3 text-xs leading-5 text-zinc-700">{p.text}</p>}
+    </article>
+  );
+}
+
+function ApplicationEvent({ p }: { p: PostEvent }) {
+  const [open, setOpen] = useState(false);
+  const st = APPLY_STATUS[p.apply_status ?? "failed"];
+  return (
+    <article className="feed-in px-5 py-3.5">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <Badge tone={st.tone}>{st.label}</Badge>
+        {p.url ? (
+          <a href={p.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-ink underline-offset-4 hover:underline">{p.job_title}</a>
+        ) : (
+          <span className="text-sm font-medium text-ink">{p.job_title}</span>
+        )}
+        <span className="text-sm text-zinc-500">{[p.company, p.location].filter(Boolean).join(" · ")}</span>
+      </div>
+      {p.reason && <p className="mt-1 text-[13px] text-zinc-600">{p.reason}</p>}
+      {(p.questions?.length ?? 0) > 0 && (
+        <>
+          <button onClick={() => setOpen(!open)} className="mt-1.5 text-xs font-medium text-zinc-500 hover:text-ink">
+            {open ? "Hide answers" : `Answers (${p.questions!.length})`}
+          </button>
+          {open && <QAList questions={p.questions!} />}
+        </>
+      )}
     </article>
   );
 }

@@ -1,0 +1,304 @@
+{
+ "pageNumber": 1,
+ "results": [
+  {
+   "jobkey": "fcb16f0aa1f37854",
+   "title": "Full Stack Intern",
+   "displayTitle": "Full Stack Intern",
+   "company": "WeIntern Pvt Ltd",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "INR",
+    "salaryTextFormatted": false,
+    "source": "EXTRACTION",
+    "text": "₹10,000 - ₹20,000 a month"
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795582789024,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>WeIntern Pvt. Ltd. provides internship opportunities that help aspiring developers build technical skills through hands-on projects and practical learning.</li>\n</ul>",
+   "jobTypes": [
+    "Fresher"
+   ],
+   "indeedApplyEnabled": true
+  },
+  {
+   "jobkey": "1d4d49d7db6aea6a",
+   "title": "VP - Data & Analytics QA Lead (KDB) - Equity Technology",
+   "displayTitle": "VP - Data & Analytics QA Lead (KDB) - Equity Technology",
+   "company": "Jefferies & Company, Inc.",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795547691713,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>Jefferies’ Equities Technology team builds and runs global, real-time trading and risk platforms across the full equities product spectrum—cash equities,…</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "5bb4556f3385bbfc",
+   "title": "Finance Automation Developer",
+   "displayTitle": "Finance Automation Developer",
+   "company": "Cummins Inc.",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795543673870,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>Assists a project manager in applying process and project management skills within an area of business or technical specialty.</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "945f6c65b18d6048",
+   "title": "Software Engineer II",
+   "displayTitle": "Software Engineer II",
+   "company": "Equifax",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": {
+    "inlineText": true,
+    "text": "Hybrid work",
+    "type": "REMOTE_HYBRID"
+   },
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1794895200000,
+   "createDate": 1795539783619,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>Perform general application development activities, including unit testing, code deployment to development environment and technical documentation.</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "060ffa998683f98f",
+   "title": "Senior Devops Engineer , CX",
+   "displayTitle": "Senior Devops Engineer , CX",
+   "company": "Nice",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": {
+    "inlineText": true,
+    "text": "Remote",
+    "type": "REMOTE_ALWAYS"
+   },
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795533376680,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li style=\"margin-bottom:0px;\">Pipeline template libraries and internal <b>developer</b> platform or golden-path work.</li>\n <li>The role builds and maintains the cloud infrastructure, automation frameworks…</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "343fce19502fa38c",
+   "title": "SDET Specialist",
+   "displayTitle": "SDET Specialist",
+   "company": "Infonox Software Private Ltd",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795529957801,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>Performs and participates in application development and testing to apply continuous quality and testability of code throughout the software development…</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": true
+  },
+  {
+   "jobkey": "912f88b43d819481",
+   "title": "Software Engineer II, AI Security",
+   "displayTitle": "Software Engineer II, AI Security",
+   "company": "Google",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795529891403,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li style=\"margin-bottom:0px;\">Bachelor’s degree or equivalent practical experience.</li>\n <li>1 year of experience with software development in one or more programming languages (e.g., <b>Python</b>, C, C++,…</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "14b8c81659e2feed",
+   "title": "SME - AWS IAC, Terraform,Python",
+   "displayTitle": "SME - AWS IAC, Terraform,Python",
+   "company": "HCLTech",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795529568687,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>Job Summary : Develop and maintain scalable <b>Python</b> applications, backend services, RESTful APIs, and enterprise Generative AI solutions.</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "78fa980826f1ac79",
+   "title": "Senior RPA Technical Lead - Blue Prism",
+   "displayTitle": "Senior RPA Technical Lead - Blue Prism",
+   "company": "HCLTech",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795529523898,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li style=\"margin-bottom:0px;\">Solid programming skills and experience in languages such as c#, <b>python</b>, or java.</li>\n <li>The Senior Technical Lead in Blue Prism will be responsible for leading…</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "0969fe41a7a6b906",
+   "title": "AI Innovation Engineer – Python + React + RAG + LLM + Agentic AI",
+   "displayTitle": "AI Innovation Engineer – Python + React + RAG + LLM + Agentic AI",
+   "company": "Vsaas Technologies Private Limited",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "INR",
+    "salaryTextFormatted": false,
+    "source": "EXTRACTION",
+    "text": "₹30,00,000 - ₹35,00,000 a year"
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795521220270,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li style=\"margin-bottom:0px;\">Employment Type:* Full-Time (FTE).</li>\n <li style=\"margin-bottom:0px;\">Design and implement Retrieval-Augmented Generation (RAG) pipelines.</li>\n <li>Develop and optimize LLM-powered applications.</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": true
+  },
+  {
+   "jobkey": "a8e7ac9bd0342ee9",
+   "title": "Principal Engineer (Java, Python & AWS)",
+   "displayTitle": "Principal Engineer (Java, Python & AWS)",
+   "company": "Autodesk",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795517681226,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>You will shape the platform’s architecture and technical direction, helping teams build reliable, scalable, and secure systems for ingesting and processing…</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "e42a73ac3c3362b0",
+   "title": "Lead - Test Automation Engineer",
+   "displayTitle": "Lead - Test Automation Engineer",
+   "company": "Northern Trust Corp.",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795513907028,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li style=\"margin-bottom:0px;\">Design and advance enterprise-scale test automation solutions across modern and legacy platforms.</li>\n <li>The role combines hands-on coding, automation architecture,…</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "9d3ea7980ce6b78a",
+   "title": "Senior Platform Engineer - Vice President",
+   "displayTitle": "Senior Platform Engineer - Vice President",
+   "company": "Citi",
+   "formattedLocation": "Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795510459303,
+   "formattedRelativeTime": "Just posted",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>The Applications Development Technology Lead Analyst is a senior level position responsible for establishing and implementing new or revised application systems…</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "378bdca219e29e0c",
+   "title": "Sr Associate, SW Full Stack Engineer",
+   "displayTitle": "Sr Associate, SW Full Stack Engineer",
+   "company": "Northern Trust Corp.",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795413600000,
+   "createDate": 1795427614487,
+   "formattedRelativeTime": "1 day ago",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>This individual as part of an Agile development team, will be responsible for analysis, design and build/development of Goals Powered Solutions platform that…</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  },
+  {
+   "jobkey": "36cb7957e31606b8",
+   "title": "Principal Developer, IT",
+   "displayTitle": "Principal Developer, IT",
+   "company": "Edwards Lifesciences",
+   "formattedLocation": "Pune, Maharashtra",
+   "remoteLocation": false,
+   "remoteWorkModel": null,
+   "salarySnippet": {
+    "currency": "",
+    "salaryTextFormatted": false
+   },
+   "pubDate": 1795500000000,
+   "createDate": 1795492008792,
+   "formattedRelativeTime": "1 day ago",
+   "snippet": "<ul style=\"list-style-type:circle;margin-top: 0px;margin-bottom: 0px;padding-left:20px;\">\n <li>Partner with platform teams to improve the Edwards <b>developer</b> experience through standardized tooling, automation and self-service capabilities.</li>\n</ul>",
+   "jobTypes": [],
+   "indeedApplyEnabled": false
+  }
+ ]
+}

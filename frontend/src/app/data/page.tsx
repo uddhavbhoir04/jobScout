@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, API_URL, timeAgo, type Contact, type Page, type Post, type Run } from "@/lib/api";
+import { api, API_URL, JOB_BOARDS, PLATFORM_LABEL, timeAgo, type Contact, type Page, type Post, type Run } from "@/lib/api";
 import { Badge, buttonClass, Card, cn, emailStatusTone, EmptyState, ErrorNote, Input, PageHeader, Segmented } from "@/components/ui";
 
 type Tab = "contacts" | "posts" | "runs";
@@ -142,10 +142,22 @@ function PostsList({ query, onError }: { query: string; onError: (m: string) => 
             ) : (
               <span className="text-sm font-medium text-ink">{p.author || "Unknown"}</span>
             )}
+            <Badge dot={false}>{PLATFORM_LABEL[p.platform] ?? p.platform}</Badge>
             <span className="text-xs text-zinc-500">Posted about {timeAgo(p.posted_at)} · search #{p.run_id}</span>
             <span className="ml-auto flex flex-wrap gap-1">{p.hashtags.map((h) => <Badge key={h} dot={false}><span className="font-mono">{h}</span></Badge>)}</span>
           </div>
-          {p.hiring_for && <p className="mt-1.5 text-sm text-zinc-700">{p.hiring_for}</p>}
+          {p.job_title ? (
+            <p className="mt-1.5 text-sm text-zinc-700">
+              {p.url ? (
+                <a href={p.url} target="_blank" rel="noreferrer" className="font-medium text-ink underline-offset-4 hover:underline">{p.job_title}</a>
+              ) : (
+                <span className="font-medium text-ink">{p.job_title}</span>
+              )}
+              {[p.location, p.experience, p.salary, p.work_mode].filter(Boolean).map((x) => <span key={x} className="text-zinc-500"> · {x}</span>)}
+            </p>
+          ) : (
+            p.hiring_for && <p className="mt-1.5 text-sm text-zinc-700">{p.hiring_for}</p>
+          )}
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[12.5px] text-zinc-800">
             {p.emails.map((e) => <span key={e}>{e}</span>)}
             {p.phones.map((ph) => <span key={ph}>{ph}</span>)}
@@ -184,7 +196,8 @@ function RunsTable({ onError }: { onError: (m: string) => void }) {
         <thead className="border-b border-line bg-zinc-50 text-xs text-zinc-500">
           <tr>
             <Th>Search</Th>
-            <Th>Hashtags</Th>
+            <Th>Source</Th>
+            <Th>Searched for</Th>
             <Th>Posted</Th>
             <Th className="text-right">Checked</Th>
             <Th className="text-right">Collected</Th>
@@ -197,7 +210,8 @@ function RunsTable({ onError }: { onError: (m: string) => void }) {
           {runs?.map((r) => (
             <tr key={r.id}>
               <Td className="tabular-nums text-zinc-500">#{r.id}</Td>
-              <Td className="font-mono text-[12.5px] text-zinc-700">{r.hashtags.join(" ")}</Td>
+              <Td className="whitespace-nowrap text-zinc-600">{PLATFORM_LABEL[r.platform] ?? r.platform}{r.kind === "apply" ? " (apply)" : ""}</Td>
+              <Td className="font-mono text-[12.5px] text-zinc-700">{r.hashtags.join(JOB_BOARDS.includes(r.platform) ? ", " : " ")}</Td>
               <Td className="whitespace-nowrap text-zinc-600">{r.date_filter.replace(/-/g, " ")}</Td>
               <Td className="text-right tabular-nums">{r.scanned}</Td>
               <Td className="text-right tabular-nums font-medium">{r.saved}/{r.limit}</Td>
@@ -208,7 +222,7 @@ function RunsTable({ onError }: { onError: (m: string) => void }) {
               </Td>
               <Td className="whitespace-nowrap text-xs text-zinc-500">{timeAgo(r.started_at)}</Td>
               <Td className="text-right">
-                {r.status !== "running" && (
+                {r.status !== "running" && r.kind !== "apply" && (
                   <a href={`${API_URL}/api/contacts.xlsx?run_id=${r.id}`} className={cn(buttonClass("secondary", "sm"), "whitespace-nowrap")}>
                     Export Excel
                   </a>

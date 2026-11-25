@@ -104,3 +104,34 @@ def test_xlsx_export_for_one_run(client):
     assert rows[1:] == [(1, None, "b@x.com", "Data Analyst", "Acme Corp")]
     assert client.get("/api/contacts.xlsx?run_id=99999").status_code == 404
     assert first != second
+
+
+def test_xlsx_export_for_a_job_board_run(client):
+    """Naukri / Indeed jobs export in the same SNo, Name, Email, Title, Company format,
+    with the listing's own title and company."""
+    from openpyxl import load_workbook
+    from sqlalchemy import select
+
+    from jobscout.db import repo
+    from jobscout.db.models import Platform, ScrapeRun, User
+    from jobscout.db.session import new_session
+
+    with new_session() as s:
+        uid = s.scalar(select(User.id).where(User.email == "u@example.com"))
+        run = ScrapeRun(user_id=uid, platform=Platform.naukri, account_ids=[], hashtags=["python"],
+                        date_filter="last-3d", requested_limit=5)
+        s.add(run)
+        s.flush()
+        post = repo.insert_post(s, user_id=uid, platform=Platform.naukri, external_id="123", run_id=run.id,
+                                description="Send your CV to hr@acme.io", job_title="Python Developer",
+                                company="Acme Labs", author_name="Acme Labs", emails=["hr@acme.io"])
+        repo.upsert_contact(s, user_id=uid, name="Priya", email="hr@acme.io", phone=None, post_id=post.id)
+        s.commit()
+        run_id = run.id
+
+    r = client.get(f"/api/contacts.xlsx?run_id={run_id}")
+    assert r.status_code == 200
+    import io
+    rows = list(load_workbook(io.BytesIO(r.content)).active.iter_rows(values_only=True))
+    assert rows == [("SNo", "Name", "Email", "Title", "Company"),
+                    (1, "Priya", "hr@acme.io", "Python Developer", "Acme Labs")]

@@ -31,6 +31,7 @@ from jobscout.web.auth import current_user
 from jobscout.web.auth import profile_router
 from jobscout.web.auth import router as auth_router
 from jobscout.web.email_api import router as email_router
+from jobscout.web.apply_api import router as apply_router
 from jobscout.web.telegram_api import router as telegram_router
 from jobscout.web.jobs import Job, manager
 
@@ -55,8 +56,9 @@ app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(email_router)
 app.include_router(telegram_router)
+app.include_router(apply_router)
 Me = Depends(current_user)
-BROWSER_JOBS = ("scrape", "login")  # share the LinkedIn browser profile: one at a time
+BROWSER_JOBS = ("scrape", "login", "apply")  # share the browser profiles: one at a time
 
 
 def _own(obj, user: User, what: str):
@@ -67,7 +69,7 @@ def _own(obj, user: User, what: str):
 
 
 def _uses_browser(job: Job) -> bool:
-    return job.kind == "login" or (job.kind == "scrape" and job.params.get("source", "linkedin") == "linkedin")
+    return job.kind in ("login", "apply") or (job.kind == "scrape" and job.params.get("source", "linkedin") != "telegram")
 
 
 def _check_server_capacity() -> None:
@@ -90,8 +92,11 @@ def _iso(dt):
 # ---------------------------------------------------------------- accounts
 class AccountIn(BaseModel):
     email: str = Field(min_length=3)
-    password: str = Field(min_length=1)
-    platform: Platform = Platform.linkedin
+    password: str = Field(default="", max_length=500)  # optional for Indeed (it emails a login code)
+    platform: Literal["linkedin", "naukri", "indeed"] = "linkedin"
+
+
+ACCOUNT_SITE = {"linkedin": "LinkedIn", "naukri": "Naukri", "indeed": "Indeed"}
 
 
 def _account_dict(a: Account) -> dict:
@@ -110,13 +115,17 @@ def list_accounts(user: User = Me):
 def add_account(body: AccountIn, user: User = Me):
     from jobscout.security.crypto import encrypt
 
+    site = ACCOUNT_SITE[body.platform]
+    if body.platform != "indeed" and not body.password:
+        raise HTTPException(422, f"Enter your {site} password.")
     with new_session() as s:
-        acc = Account(user_id=user.id, platform=body.platform, login_email=body.email.strip().lower(), password_enc=encrypt(body.password))
+        acc = Account(user_id=user.id, platform=Platform(body.platform), login_email=body.email.strip().lower(),
+                      password_enc=encrypt(body.password))
         s.add(acc)
         try:
             s.commit()
         except IntegrityError:
-            raise HTTPException(409, "You already connected this LinkedIn account.")
+            raise HTTPException(409, f"You already connected this {site} account.")
         return _account_dict(acc)
 
 
@@ -148,7 +157,8 @@ def login_account(account_id: int, user: User = Me):
 
     def target(job: Job) -> None:
         from jobscout.browser.manager import open_context
-        from jobscout.scrapers import get_scraper
+        from jobscout.scrapers import get_board_scraper, get_scraper
+        from jobscout.scrapers.base import BoardBlocked
         from jobscout.security.crypto import decrypt
 
         job.emit({"type": "log", "level": "info",
@@ -156,7 +166,13 @@ def login_account(account_id: int, user: User = Me):
         with new_session() as s:
             acc = s.get(Account, account_id)
             with open_context(acc, headless=False) as ctx:
-                ok = get_scraper(acc.platform, ctx).ensure_logged_in(acc.login_email, decrypt(acc.password_enc), True)
+                scraper = (get_scraper(acc.platform, ctx) if acc.platform == Platform.linkedin
+                           else get_board_scraper(acc.platform, ctx, headless=False))
+                try:
+                    ok = scraper.ensure_logged_in(acc.login_email, decrypt(acc.password_enc), True)
+                except BoardBlocked as e:
+                    job.emit({"type": "log", "level": "error", "message": str(e)})
+                    ok = False
             acc.last_status = "ok" if ok else "login_failed"
             if ok:
                 acc.last_login_at = now()
@@ -178,8 +194,8 @@ class ScrapeIn(BaseModel):
     limit: int = Field(20, ge=1, le=100)
     account_ids: list[int] | None = None
     headless: bool = False
-    # Telegram source (ignored for LinkedIn)
-    source: Literal["linkedin", "telegram"] = "linkedin"
+    # Telegram / job-board sources (ignored for LinkedIn). Naukri / Indeed use an account when one is connected.
+    source: Literal["linkedin", "telegram", "naukri", "indeed"] = "linkedin"
     keywords: list[str] = Field(default=[], max_length=30)
     channel_ids: list[int] | None = None
     exp_min: int | None = Field(default=None, ge=0, le=50)
@@ -205,12 +221,20 @@ def start_scrape(body: ScrapeIn, user: User = Me):
         if not [t for t in normalise_tags(body.tags) if t != HIRING_TAG]:
             raise HTTPException(422, "Add at least one role hashtag.")
         _check_server_capacity()
+    if body.source in ("naukri", "indeed"):
+        from jobscout.pipeline.telegram import normalise_keywords
+
+        if not normalise_keywords(body.keywords):
+            raise HTTPException(422, "Add at least one job title or skill to search for.")
+        _check_server_capacity()
     try:
         dr = resolve(body.date_filter, body.date_from, body.date_to)
     except ValueError as e:
         raise HTTPException(422, str(e))
     if body.source == "telegram":
         return _start_telegram_scrape(body, dr, user)
+    if body.source in ("naukri", "indeed"):
+        return _start_board_scrape(body, dr, user, Platform(body.source))
 
     def target(job: Job) -> None:
         from jobscout.pipeline.scrape import run_scrape
@@ -258,6 +282,93 @@ def _start_telegram_scrape(body: ScrapeIn, dr, user: User):
                   "unprocessed_tags": [], "stopped": res.stopped})
 
     return manager.start("scrape", body.model_dump(mode="json"), target, user_id=user.id).summary()
+
+
+def _start_board_scrape(body: ScrapeIn, dr, user: User, platform: Platform):
+    """Naukri / Indeed: public search pages in a browser, no account. Every matching job is saved."""
+    def target(job: Job) -> None:
+        from jobscout.pipeline.boards import run_board_scrape
+
+        job.emit({"type": "start", "source": body.source, "unit": "jobs",
+                  "date_range": {"label": dr.label, "start": _iso(dr.start), "end": _iso(dr.end)}, "limit": body.limit})
+
+        def progress(r):
+            job.emit({"type": "progress", "scanned": r.scanned, "saved": r.saved, "collected": r.collected,
+                      "limit": body.limit})
+
+        res = run_board_scrape(user_id=user.id, platform=platform, keywords=body.keywords, date_range=dr,
+                               limit=body.limit, exp_min=body.exp_min, exp_max=body.exp_max,
+                               location=body.location, work_types=body.work_types, headless=body.headless,
+                               account_ids=body.account_ids or None,
+                               on_progress=progress, on_event=job.emit, should_stop=lambda: job.stop_requested)
+        job.emit({"type": "summary", "run_id": res.run_id, "scanned": res.scanned, "saved": res.saved,
+                  "collected": res.collected, "limit": body.limit, "stop_reason": res.stop_reason,
+                  "skipped": res.skipped, "failed_accounts": res.failed_accounts, "unprocessed_tags": [],
+                  "stopped": res.stopped})
+
+    return manager.start("scrape", body.model_dump(mode="json"), target, user_id=user.id).summary()
+
+
+class ApplyIn(BaseModel):
+    source: Literal["linkedin", "naukri", "indeed"]
+    keywords: list[str] = Field(min_length=1, max_length=30)
+    date_filter: str = "last-7d"
+    date_from: date | None = None
+    date_to: date | None = None
+    limit: int = Field(10, ge=1, le=50)
+    exp_min: int | None = Field(default=None, ge=0, le=50)
+    exp_max: int | None = Field(default=None, ge=0, le=50)
+    location: str | None = Field(default=None, max_length=200)
+    work_types: list[Literal["remote", "hybrid", "on-site"]] = []
+    dry_run: bool = True
+    headless: bool = False
+
+
+@app.post("/api/apply")
+def start_apply(body: ApplyIn, user: User = Me):
+    """Search a site's Easy Apply jobs and apply with the user's account (see pipeline/apply.py)."""
+    from jobscout.pipeline.apply import preflight
+    from jobscout.pipeline.telegram import normalise_keywords
+
+    if manager.running(BROWSER_JOBS, user_id=user.id):
+        raise HTTPException(409, "Another job is running. Wait for it to finish.")
+    if not normalise_keywords(body.keywords):
+        raise HTTPException(422, "Add at least one job title or skill to search for.")
+    if body.exp_min is not None and body.exp_max is not None and body.exp_min > body.exp_max:
+        raise HTTPException(422, "Minimum experience can't be more than the maximum.")
+    try:
+        dr = resolve(body.date_filter, body.date_from, body.date_to)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    platform = Platform(body.source)
+    with new_session() as s:
+        problem = preflight(s, user.id, platform, body.dry_run)
+        s.commit()
+    if problem:
+        raise HTTPException(422, problem)
+    _check_server_capacity()
+
+    def target(job: Job) -> None:
+        from jobscout.pipeline.apply import run_apply
+
+        job.emit({"type": "start", "source": body.source, "unit": "applications", "dry_run": body.dry_run,
+                  "date_range": {"label": dr.label, "start": _iso(dr.start), "end": _iso(dr.end)}, "limit": body.limit})
+
+        def progress(r):
+            job.emit({"type": "progress", "scanned": r.scanned, "saved": r.saved, "collected": r.collected,
+                      "limit": body.limit})
+
+        res = run_apply(user_id=user.id, platform=platform, keywords=body.keywords, date_range=dr, limit=body.limit,
+                        exp_min=body.exp_min, exp_max=body.exp_max, location=body.location,
+                        work_types=body.work_types, dry_run=body.dry_run, headless=body.headless,
+                        use_ai=user.is_paid, on_progress=progress, on_event=job.emit,
+                        should_stop=lambda: job.stop_requested)
+        job.emit({"type": "summary", "run_id": res.run_id, "scanned": res.scanned, "saved": res.saved,
+                  "collected": res.collected, "limit": body.limit, "stop_reason": res.stop_reason,
+                  "skipped": res.skipped, "failed_accounts": res.failed_accounts, "unprocessed_tags": [],
+                  "stopped": res.stopped})
+
+    return manager.start("apply", body.model_dump(mode="json"), target, user_id=user.id).summary()
 
 
 @app.get("/api/jobs/current")
@@ -333,7 +444,9 @@ def list_posts(q: str | None = Query(None, max_length=200), run_id: int | None =
             "id": p.id, "author": p.author_name, "author_url": p.author_profile_url, "url": p.url,
             "hiring_for": p.hiring_for, "contact_name": p.contact_name, "emails": p.emails, "phones": p.phones,
             "hashtags": p.matched_hashtags, "posted_at": _iso(p.posted_at), "scraped_at": _iso(p.scraped_at),
-            "run_id": p.run_id, "text": p.description,
+            "run_id": p.run_id, "text": p.description, "platform": p.platform.value,
+            "job_title": p.job_title, "company": p.company, "location": p.job_location,
+            "experience": p.experience, "salary": p.salary, "work_mode": p.work_mode,
         } for p in rows]}
 
 
@@ -425,8 +538,8 @@ def export_contacts_xlsx(run_id: int | None = Query(None, ge=1), user: User = Me
         for n, (c, p) in enumerate(rows, start=1):
             title = company = None
             if p is not None:
-                title = find_title(p.description or "") or ((p.hiring_for or "").split(" | ")[0] or None)
-                company = find_company(p.description or "", p.author_name, p.author_profile_url)
+                title = p.job_title or find_title(p.description or "") or ((p.hiring_for or "").split(" | ")[0] or None)
+                company = p.company or find_company(p.description or "", p.author_name, p.author_profile_url)
             ws.append([n, c.name, c.email, title, company])  # None -> empty cell
     for col, width in zip("ABCDE", (6, 28, 34, 40, 30)):
         ws.column_dimensions[col].width = width
@@ -440,7 +553,7 @@ def export_contacts_xlsx(run_id: int | None = Query(None, ge=1), user: User = Me
 @app.get("/api/runs")
 def list_runs(limit: int = Query(20, ge=1, le=200), user: User = Me):
     with new_session() as s:
-        return [{"id": r.id, "hashtags": r.hashtags, "date_filter": r.date_filter, "limit": r.requested_limit,
+        return [{"id": r.id, "kind": r.kind, "platform": r.platform.value, "hashtags": r.hashtags, "date_filter": r.date_filter, "limit": r.requested_limit,
                  "scanned": r.posts_scanned, "saved": r.posts_saved, "status": r.status.value, "error": r.error,
                  "started_at": _iso(r.started_at), "finished_at": _iso(r.finished_at)}
                 for r in s.scalars(select(ScrapeRun).where(ScrapeRun.user_id == user.id)

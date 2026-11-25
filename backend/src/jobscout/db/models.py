@@ -16,12 +16,14 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Platform(str, enum.Enum):
     linkedin = "linkedin"
     indeed = "indeed"
+    naukri = "naukri"
     wellfound = "wellfound"
     telegram = "telegram"  # public channel web previews (t.me/s/<channel>); no account needed
 
@@ -147,6 +149,7 @@ class ScrapeRun(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int | None] = _owner()
+    kind: Mapped[str] = mapped_column(Text, default="scrape", server_default="scrape")  # "scrape" | "apply"
     platform: Mapped[Platform] = mapped_column(_pg_enum(Platform, "platform"))
     account_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), server_default=text("'{}'"))
     hashtags: Mapped[list[str]] = mapped_column(ARRAY(Text))
@@ -182,6 +185,13 @@ class Post(Base):
     emails: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
     phones: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
     matched_hashtags: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))
+    # Structured fields from job boards (Naukri, Indeed). Empty for LinkedIn / Telegram posts.
+    job_title: Mapped[str | None] = mapped_column(Text)
+    company: Mapped[str | None] = mapped_column(Text)
+    job_location: Mapped[str | None] = mapped_column(Text)
+    experience: Mapped[str | None] = mapped_column(Text)
+    salary: Mapped[str | None] = mapped_column(Text)
+    work_mode: Mapped[str | None] = mapped_column(Text)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     run_id: Mapped[int | None] = mapped_column(ForeignKey("scrape_runs.id", ondelete="SET NULL"))
     scraped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -244,3 +254,54 @@ class EmailOutreach(Base):
 
     contact: Mapped[Contact] = relationship(back_populates="outreach")
     post: Mapped[Post | None] = relationship()
+
+
+# ---------------------------------------------------------------- auto apply
+class ApplySettings(Base):
+    """Per-user answers to application screening questions, and the per-site daily apply cap."""
+
+    __tablename__ = "apply_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    answers: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
+    learned: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))  # question -> answer
+    daily_cap: Mapped[int] = mapped_column(Integer, default=25, server_default=text("25"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ApplyStatus(str, enum.Enum):
+    applied = "applied"
+    dry_run = "dry_run"        # form filled, final submit not clicked
+    needs_you = "needs_you"    # a question we couldn't answer: apply by hand
+    skipped = "skipped"        # e.g. already applied on the site, not Easy Apply after all
+    failed = "failed"
+
+
+class Application(Base):
+    """One job we tried to apply to. Unique per user + site + job, so nothing is applied to twice."""
+
+    __tablename__ = "applications"
+    __table_args__ = (
+        UniqueConstraint("user_id", "platform", "external_id", name="uq_applications_user_platform_external_id"),
+        Index("ix_applications_user_created", "user_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = _owner()
+    platform: Mapped[Platform] = mapped_column(_pg_enum(Platform, "platform"))
+    external_id: Mapped[str] = mapped_column(Text)
+    url: Mapped[str | None] = mapped_column(Text)
+    title: Mapped[str | None] = mapped_column(Text)
+    company: Mapped[str | None] = mapped_column(Text)
+    location: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[ApplyStatus] = mapped_column(_pg_enum(ApplyStatus, "apply_status"))
+    reason: Mapped[str | None] = mapped_column(Text)
+    questions: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    run_id: Mapped[int | None] = mapped_column(ForeignKey("scrape_runs.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

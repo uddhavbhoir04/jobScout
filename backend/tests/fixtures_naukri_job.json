@@ -1,0 +1,54 @@
+{
+ "jobDetails": {
+  "jobId": "251126010590",
+  "title": "Python Developer Lead",
+  "description": "<p> </p><p><strong>Build, ship and maintain Go | No Go features across the React UI, Node.js and Python services, and the GenAI analysis pipeline. Work directly under the Go | No Go Lead, turning roadmap items into working, tested features and keeping the platform healthy in production. \"Job Description Role Python Full Stack AI-Native Applications Developer - Professional Core FSD Skills: 7 to 12+ years of in-depth experience in Python API, Web development, REST API, DB Integration, Unit testing and React / Angular. Strong experience in REST Http services design using Swagger/Open API, unit testing and integration testing. Strong experience in various backend and frontend design patternsS Strong experience in frameworks like Flask & Django. Strong experience working with Salt/Puppet/Chef/etc. 3+ years of Strong experience in Angular 17+ or REACT JS 18 Strong experience in Java script, jQuery, Bootstrap, Html 5, CSS3 2+ years of experience with SQL Server / PostgreSQL / MySQL or any RDBMS integration using Python libraries (writing stored procedures, complex SQLs, performance tuning, handling transactions etc.) Strong experience in unit testing, mocking frameworks, integration testing and code quality tools and frameworks. Good communication and unit testing knowledge. Familiar with Continuous Integration methodologies and tools, including Jenkins, GIT, Mercurial etcRole & responsibilities</strong> </p><br /><br /><p><strong>Preferred candidate profile</strong> </p><br /><br />",
+  "shortDescription": "7-12+ years in Python API, REST API design with Swagger/OpenAPI, Flask & Django, React.js 18 or Angular 17+, SQL RDBMS integration, unit and integration testing|Build, ship, and maintain Go | No Go features across React UI, Node.js, Python services, and GenAI pipeline; ensure platform health in production",
+  "wfhType": "0",
+  "locations": [
+   {
+    "localities": [],
+    "label": "Hyderabad",
+    "url": "https://www.naukri.com/jobs-in-hyderabad-secunderabad"
+   },
+   {
+    "localities": [],
+    "label": "Pune",
+    "url": "https://www.naukri.com/jobs-in-pune"
+   },
+   {
+    "localities": [],
+    "label": "Chennai",
+    "url": "https://www.naukri.com/jobs-in-chennai"
+   }
+  ],
+  "experienceText": "6-11 Yrs",
+  "createdDate": "2026-11-25 10:16:02",
+  "staticUrl": "https://www.naukri.com/job-listings-python-developer-lead-briskwin-it-bwit-hyderabad-pune-chennai-6-to-11-years-251126010590",
+  "keySkills": {
+   "other": [
+    {
+     "label": "AWS",
+     "id": "9125"
+    }
+   ],
+   "preferred": [
+    {
+     "label": "Python",
+     "id": "7681"
+    },
+    {
+     "label": "ai",
+     "id": null
+    },
+    {
+     "label": "React.js",
+     "id": "56097"
+    }
+   ]
+  },
+  "companyDetail": {
+   "name": "BriskWin IT (BWIT)"
+  }
+ }
+}

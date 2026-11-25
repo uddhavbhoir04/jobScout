@@ -41,7 +41,8 @@ def normalise_keywords(keywords: list[str]) -> list[str]:
     out: dict[str, None] = {}
     for k in keywords:
         for part in re.split(r"[,\n]", k):
-            part = part.strip().lstrip("#").lower()
+            # "×" / "✕": remove buttons of pasted chips
+            part = re.sub(r"\s+", " ", re.sub(r"[×✕✖✗]", " ", part)).strip().lstrip("#").lower()
             if part:
                 out.setdefault(part, None)
     return list(out)

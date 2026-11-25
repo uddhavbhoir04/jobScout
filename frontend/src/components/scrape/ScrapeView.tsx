@@ -8,15 +8,18 @@ import { ErrorNote, PageHeader, Segmented, StatRow } from "../ui";
 import { FilterPanel, type Filters } from "./FilterPanel";
 import { jobFilterParams } from "./JobFilters";
 import { LiveFeed } from "./LiveFeed";
+import { BoardPanel, type Board, type BoardFilters } from "./BoardPanel";
 import { TelegramPanel, type TelegramFilters } from "./TelegramPanel";
 
-type Source = "linkedin" | "telegram";
+type Source = "linkedin" | "telegram" | Board;
+const SOURCES: Source[] = ["linkedin", "telegram", "naukri", "indeed"];
+const asSource = (v: unknown): Source => (SOURCES.includes(v as Source) ? (v as Source) : "linkedin");
 const sourceKey = (userId: number) => `jobscout.source.user-${userId}`;
 
 function loadSource(userId: number): Source {
   if (typeof window === "undefined") return "linkedin";
   try {
-    return localStorage.getItem(sourceKey(userId)) === "telegram" ? "telegram" : "linkedin";
+    return asSource(localStorage.getItem(sourceKey(userId)));
   } catch {
     return "linkedin";
   }
@@ -56,7 +59,7 @@ export function ScrapeView() {
       .then((j) => {
         if (!j) return;
         setJobId(j.id);
-        if (j.status === "running") setSourceState(j.params.source === "telegram" ? "telegram" : "linkedin");
+        if (j.status === "running") setSourceState(asSource(j.params.source));
       })
       .catch(() => {});
     refreshStats();
@@ -126,6 +129,32 @@ export function ScrapeView() {
     }
   };
 
+  const startBoard = async (board: Board, f: BoardFilters) => {
+    setError(null);
+    setStopRequested(false);
+    setStarting(true);
+    try {
+      const job = await api<JobSummary>("/api/scrape", {
+        method: "POST",
+        body: JSON.stringify({
+          source: board,
+          keywords: f.keywords,
+          date_filter: f.datePreset === "custom" ? "today" : f.datePreset,
+          date_from: f.datePreset === "custom" ? f.dateFrom || null : null,
+          date_to: f.datePreset === "custom" ? f.dateTo || null : null,
+          limit: f.limit,
+          headless: f.headless,
+          ...jobFilterParams(f),
+        }),
+      });
+      setJobId(job.id);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setStarting(false);
+    }
+  };
+
   const stop = async () => {
     if (!jobId) return;
     setStopRequested(true);
@@ -141,7 +170,7 @@ export function ScrapeView() {
     <div>
       <PageHeader
         title="Scrape"
-        description="Search LinkedIn hiring posts or public Telegram job channels. Posts with a recruiter email, phone number or named contact are saved to your contacts."
+        description="Search LinkedIn hiring posts, public Telegram job channels, Naukri or Indeed. Recruiter emails and phone numbers go to your contacts; Naukri and Indeed save jobs whose description has an email."
       />
 
       {stats && (
@@ -166,14 +195,18 @@ export function ScrapeView() {
             options={[
               { value: "linkedin", label: "LinkedIn" },
               { value: "telegram", label: "Telegram" },
+              { value: "naukri", label: "Naukri" },
+              { value: "indeed", label: "Indeed" },
             ]}
           />
-          {source === "telegram" ? (
+          {source === "naukri" || source === "indeed" ? (
+            <BoardPanel key={`${source}-${user?.id}`} board={source} userId={user?.id ?? 0} accounts={(accounts ?? []).filter((a) => a.platform === source)} running={running} starting={starting} stopping={stopping} onStart={(f) => startBoard(source, f)} onStop={stop} />
+          ) : source === "telegram" ? (
             <TelegramPanel key={user?.id} userId={user?.id ?? 0} running={running} starting={starting} stopping={stopping} onStart={startTelegram} onStop={stop} />
           ) : accounts === null ? (
             <div className="h-[560px] animate-pulse rounded-lg border border-line bg-surface" />
           ) : (
-            <FilterPanel key={user?.id} userId={user?.id ?? 0} accounts={accounts} running={running} starting={starting} stopping={stopping} onStart={start} onStop={stop} />
+            <FilterPanel key={user?.id} userId={user?.id ?? 0} accounts={accounts.filter((a) => a.platform === "linkedin")} running={running} starting={starting} stopping={stopping} onStart={start} onStop={stop} />
           )}
         </div>
         <LiveFeed events={events} status={status} />

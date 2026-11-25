@@ -90,3 +90,19 @@ def test_first_user_adopts_existing_data(db, client):
     assert first.get("/api/posts").json()["total"] == 1
     assert second.get("/api/stats").json()["contacts"] == 0
     assert second.get("/api/contacts").json()["items"] == []
+
+
+def test_naukri_and_indeed_accounts(client):
+    c = client()
+    _signup(c, "carol@x.io")
+    # Naukri needs a password; Indeed can log in with an emailed code instead
+    r = c.post("/api/accounts", json={"platform": "naukri", "email": "carol@x.io", "password": ""})
+    assert r.status_code == 422 and "Naukri password" in r.json()["detail"]
+    assert c.post("/api/accounts", json={"platform": "naukri", "email": "carol@x.io", "password": "pw"}).status_code == 201
+    assert c.post("/api/accounts", json={"platform": "indeed", "email": "carol@x.io"}).status_code == 201
+    # the same email on LinkedIn is a separate account; twice on one site is not
+    assert c.post("/api/accounts", json={"email": "carol@x.io", "password": "pw"}).status_code == 201
+    r = c.post("/api/accounts", json={"platform": "indeed", "email": "carol@x.io"})
+    assert r.status_code == 409 and "Indeed" in r.json()["detail"]
+    assert c.post("/api/accounts", json={"platform": "telegram", "email": "carol@x.io", "password": "x"}).status_code == 422
+    assert sorted(a["platform"] for a in c.get("/api/accounts").json()) == ["indeed", "linkedin", "naukri"]

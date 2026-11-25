@@ -7,7 +7,8 @@ function normalise(raw: string, mode: "hashtag" | "keyword"): string[] {
   // hashtags: split on spaces/commas and add "#"; keywords: split on commas only, so "machine learning" stays one
   const parts = mode === "hashtag" ? raw.split(/[\s,]+/) : raw.split(/[,\n]+/);
   return parts
-    .map((t) => t.trim().replace(/^#+/, "").replace(/\s+/g, " ").toLowerCase())
+    // "×" / "✕": the remove buttons of chips copied from elsewhere (or from this box) come along when pasted
+    .map((t) => t.replace(/[×✕✖✗]/g, " ").trim().replace(/^#+/, "").replace(/\s+/g, " ").toLowerCase())
     .filter(Boolean)
     .map((t) => (mode === "hashtag" ? `#${t}` : t));
 }
